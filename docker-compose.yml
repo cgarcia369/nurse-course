@@ -1,0 +1,14 @@
+version: '3'
+
+services:
+  todosDB:
+    image: postgres:15.3
+    container_name: nurse-course
+    restart: always
+    ports:
+      - 5438:5432
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+    volumes:
+      - ~/postgres-data/postgres-nurse:/var/lib/postgresql/data
