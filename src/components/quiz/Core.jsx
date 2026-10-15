@@ -1,10 +1,9 @@
-import React, { useState, useEffect, useCallback, Fragment } from "react";
+import React, { useState, useEffect, Fragment } from "react";
 import { nanoid } from "nanoid";
 import ProgressBar from "./core-components/ProgressBar";
-import QuizResultFilter from "./core-components/QuizResultFilter";
+import QuizResults from "./QuizResults";
 import { checkAnswer, selectAnswer, rawMarkup } from "./core-components/helpers";
 import InstantFeedback from "./core-components/InstantFeedback";
-import Explanation from "./core-components/Explanation";
 
 function Core({
   questions,
@@ -30,9 +29,7 @@ function Core({
   const [buttons, setButtons] = useState({});
   const [correct, setCorrect] = useState([]);
   const [incorrect, setIncorrect] = useState([]);
-  const [unanswered, setUnanswered] = useState([]);
   const [userInput, setUserInput] = useState([]);
-  const [filteredValue, setFilteredValue] = useState("all");
   const [userAttempt, setUserAttempt] = useState(1);
   const [showDefaultResultState, setShowDefaultResult] = useState(true);
   const [answerSelectionTypeState, setAnswerSelectionType] = useState(undefined);
@@ -121,55 +118,6 @@ function Core({
     }
   };
 
-  const handleChange = (event) => {
-    setFilteredValue(event.target.value);
-  };
-
-  const renderAnswerInResult = (question, userInputIndex) => {
-    const { answers, correctAnswer, questionType } = question;
-    let { answerSelectionType } = question;
-    let answerBtnCorrectClassName;
-    let answerBtnIncorrectClassName;
-
-    // Default single to avoid code breaking due to automatic version upgrade
-    answerSelectionType = answerSelectionType || "single";
-
-    return answers.map((answer, index) => {
-      if (answerSelectionType === "single") {
-        // correctAnswer - is string
-        answerBtnCorrectClassName = `${index + 1}` === correctAnswer ? "correct" : "";
-        answerBtnIncorrectClassName =
-          `${userInputIndex}` !== correctAnswer && `${index + 1}` === `${userInputIndex}` ? "incorrect" : "";
-
-        if (userInputIndex === undefined && `${index + 1}` !== correctAnswer) {
-          answerBtnIncorrectClassName = "unanswered";
-        }
-      } else {
-        // correctAnswer - is array of numbers
-        answerBtnCorrectClassName = correctAnswer.includes(index + 1) ? "correct" : "";
-        answerBtnIncorrectClassName =
-          !correctAnswer.includes(index + 1) && userInputIndex?.includes(index + 1) ? "incorrect" : "";
-
-        if (userInputIndex === undefined && !correctAnswer.includes(index + 1)) {
-          answerBtnIncorrectClassName = "unanswered";
-        }
-      }
-
-      return (
-        <div key={nanoid()}>
-          <button
-            type="button"
-            disabled
-            className={`answerBtn btn ${answerBtnCorrectClassName}${answerBtnIncorrectClassName}`}
-          >
-            {questionType === "text" && <span>{answer}</span>}
-            {questionType === "photo" && <img src={answer} alt="answer" />}
-          </button>
-        </div>
-      );
-    });
-  };
-
   const renderTags = (answerSelectionType, numberOfSelection, segment) => {
     const { singleSelectionTagText, multipleSelectionTagText, pickNumberOfSelection } = appLocale;
 
@@ -186,45 +134,6 @@ function Core({
       </div>
     );
   };
-
-  const renderQuizResultQuestions = useCallback(() => {
-    let filteredQuestions;
-    let filteredUserInput;
-
-    if (filteredValue !== "all") {
-      let targetQuestions = unanswered;
-      if (filteredValue === "correct") {
-        targetQuestions = correct;
-      } else if (filteredValue === "incorrect") {
-        targetQuestions = incorrect;
-      }
-      filteredQuestions = questions.filter((_, index) => targetQuestions.indexOf(index) !== -1);
-      filteredUserInput = userInput.filter((_, index) => targetQuestions.indexOf(index) !== -1);
-    }
-
-    return (filteredQuestions || questions).map((question, index) => {
-      const userInputIndex = filteredUserInput ? filteredUserInput[index] : userInput[index];
-
-      // Default single to avoid code breaking due to automatic version upgrade
-      const answerSelectionType = question.answerSelectionType || "single";
-
-      return (
-        <div className="result-answer-wrapper" key={nanoid()}>
-          <h3
-            dangerouslySetInnerHTML={rawMarkup(
-              `P${question.questionIndex}: ${
-                question.question
-              } ${appLocale.marksOfQuestion.replace("<marks>", question.point)}`
-            )}
-          />
-          {question.questionPic && <img src={question.questionPic} alt="question" />}
-          {renderTags(answerSelectionType, question.correctAnswer.length, question.segment)}
-          <div className="result-answer">{renderAnswerInResult(question, userInputIndex)}</div>
-          <Explanation question={question} isResultPage />
-        </div>
-      );
-    });
-  }, [endQuiz, filteredValue]);
 
   const renderAnswers = (question, answerButtons) => {
     const { answers, correctAnswer, questionType, questionIndex } = question;
@@ -300,30 +209,6 @@ function Core({
     ));
   };
 
-  const getUnansweredQuestions = () => {
-    questions.forEach((question, index) => {
-      if (userInput[index] === undefined) {
-        setUnanswered((oldArray) => [...oldArray, index]);
-      }
-    });
-  };
-
-  const renderResult = () => (
-    <div className="card-body">
-      <h2>
-        {appLocale.resultPageHeaderText
-          .replace("<correctIndexLength>", correct.length)
-          .replace("<questionLength>", questions.length)}
-      </h2>
-      <h2>
-        {appLocale.resultPagePoint.replace("<correctPoints>", correctPoints).replace("<totalPoints>", totalPoints)}
-      </h2>
-      <br />
-      <QuizResultFilter filteredValue={filteredValue} handleChange={handleChange} appLocale={appLocale} />
-      {renderQuizResultQuestions()}
-    </div>
-  );
-
   useEffect(() => {
     let countdown;
 
@@ -351,7 +236,6 @@ function Core({
   const handleTimeUp = () => {
     setIsRunning(false);
     setEndQuiz(true);
-    getUnansweredQuestions();
   };
 
   return (
@@ -448,7 +332,16 @@ function Core({
           )}
         </div>
       )}
-      {endQuiz && showDefaultResultState && customResultPage === undefined && renderResult()}
+      {endQuiz && showDefaultResultState && customResultPage === undefined && (
+        <QuizResults
+          questions={questions}
+          correct={correct}
+          userInput={userInput}
+          correctPoints={correctPoints}
+          totalPoints={totalPoints}
+          appLocale={appLocale}
+        />
+      )}
       {endQuiz && !showDefaultResultState && customResultPage !== undefined && customResultPage(questionSummary)}
     </div>
   );

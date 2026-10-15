@@ -5,6 +5,7 @@ import { CourseSharedProps, CourseStepBase } from "./Course";
 import { StepsType } from "@/enums";
 import CourseStepLayout from "./CourseStepLayout";
 import { toast } from "react-toastify";
+import { Button } from "../ui/button";
 
 const QuizAny = Quiz as any;
 export type QuizConfig = {
@@ -40,6 +41,7 @@ const CourseStepQuiz = ({
 }: CourseStepQuizProps) => {
   const [disabled, setDisabled] = useState(true);
   const [showStartAgain, setShowStartAgain] = useState(false);
+  const [passed, setPassed] = useState(false);
   const [completeAgain, setCompleteAgain] = useState(false);
   const [key, setKey] = useState(0);
   return (
@@ -72,43 +74,48 @@ const CourseStepQuiz = ({
           </div>
         ) : (
           <>
-            {showStartAgain && (
-              <div className="text-center text-2xl font-bold mb-4">
-                ¿Quieres empezar de nuevo el cuestionario?
-                <button
-                  className="ml-2 text-blue-500 hover:underline"
-                  onClick={() => {
-                    setKey((prevKey) => prevKey + 1); // Reset the quiz
-                    setDisabled(true);
-                    setShowStartAgain(false);
-                  }}
-                >
-                  Empezar de nuevo
-                </button>
-              </div>
-            )}
             <QuizAny
               quiz={config}
               shuffle={true}
               key={key}
               onComplete={({ totalPoints, correctPoints }: any) => {
-                if (correctPoints / totalPoints >= 0.6) {
+                const hasPassed = totalPoints > 0 && correctPoints / totalPoints >= 0.6;
+                setPassed(hasPassed);
+                setShowStartAgain(true);
+                setDisabled(!hasPassed);
+                if (hasPassed) {
                   toast.success("¡Has completado el cuestionario correctamente!");
-                  setDisabled(false);
                   return;
                 }
                 if (!isAlreadyCompleted) {
                   toast.error(
-                    "Lo siento, no has alcanzado la puntuación mínima del 80% para completar el cuestionario por favor completa de nuevo el cuestionario."
+                    "Necesitas al menos un 60% para completar el cuestionario. Revisa tus respuestas e inténtalo de nuevo."
                   );
                 }
-                setKey((prevKey) => prevKey + 1); // Reset the quiz
-                setDisabled(true);
-                // setShowStartAgain(false);
-                // setShowStartAgain(true);
-                // setDisabled(true);
               }}
             />
+            {showStartAgain && (
+              <div className="w-full max-w-[640px] rounded-xl border bg-muted/40 p-5 mt-4 flex flex-col sm:flex-row sm:items-center gap-4">
+                <div className="flex-1 text-sm">
+                  <p className="font-semibold">{passed ? "¡Buen trabajo! Puedes continuar." : "Sigue practicando"}</p>
+                  <p className="text-muted-foreground mt-1">
+                    {passed
+                      ? "También puedes repetir el cuestionario para reforzar lo aprendido."
+                      : "Necesitas al menos un 60%. Revisa las explicaciones antes de volver a intentarlo."}
+                  </p>
+                </div>
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setKey((prevKey) => prevKey + 1);
+                    setDisabled(true);
+                    setShowStartAgain(false);
+                  }}
+                >
+                  Volver a intentar
+                </Button>
+              </div>
+            )}
           </>
         )}
       </CourseStepLayout>
