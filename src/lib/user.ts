@@ -18,7 +18,7 @@ export const getCurrentUserFull = unstable_cache(
 export const authWithUser = async () => {
   const session = await auth();
   if (!session?.user) {
-    redirect("/api/auth/signin");
+    redirect("/login");
   }
   const currentUserFull = await getCurrentUserFull(session!.user!.id!);
   if (!currentUserFull) {

@@ -5,5 +5,9 @@ import Google from "@auth/core/providers/google";
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
   adapter: PrismaAdapter(prisma),
+  pages: {
+    signIn: "/login",
+    error: "/login"
+  },
   providers: [Google({})]
 });
